@@ -77,44 +77,44 @@ docker-compose exec mongo1 /usr/bin/mongo --eval '''if (rs.status()["ok"] == 0) 
 
 rs.conf();'''
 
-echo -e "\nKafka Topics:"
-curl -X GET "http://localhost:8082/topics" -w "\n"
+# echo -e "\nKafka Topics:"
+# curl -X GET "http://localhost:8082/topics" -w "\n"
 
-echo -e "\nKafka Connectors:"
-curl -X GET "http://localhost:8083/connectors/" -w "\n"
+# echo -e "\nKafka Connectors:"
+# curl -X GET "http://localhost:8083/connectors/" -w "\n"
 
-echo -e "\nAdding datagen pageviews:"
-curl -X POST -H "Content-Type: application/json" --data '
-  { "name": "datagen-pageviews",
-    "config": {
-      "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
-      "kafka.topic": "pageviews",
-      "quickstart": "pageviews",
-      "key.converter": "org.apache.kafka.connect.json.JsonConverter",
-      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-      "value.converter.schemas.enable": "false",
-      "producer.interceptor.classes": "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor",
-      "max.interval": 200,
-      "iterations": 10000000,
-      "tasks.max": "1"
-}}' http://localhost:8083/connectors -w "\n"
+# echo -e "\nAdding datagen pageviews:"
+# curl -X POST -H "Content-Type: application/json" --data '
+#   { "name": "datagen-pageviews",
+#     "config": {
+#       "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+#       "kafka.topic": "pageviews",
+#       "quickstart": "pageviews",
+#       "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+#       "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+#       "value.converter.schemas.enable": "false",
+#       "producer.interceptor.classes": "io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor",
+#       "max.interval": 200,
+#       "iterations": 10000000,
+#       "tasks.max": "1"
+# }}' http://localhost:8083/connectors -w "\n"
 
-sleep 5
+# sleep 5
 
-echo -e "\nAdding MongoDB Kafka Sink Connector for the 'pageviews' topic into the 'test.pageviews' collection:"
-curl -X POST -H "Content-Type: application/json" --data '
-  {"name": "mongo-sink",
-   "config": {
-     "connector.class":"com.mongodb.kafka.connect.MongoSinkConnector",
-     "tasks.max":"1",
-     "topics":"pageviews",
-     "connection.uri":"mongodb://mongo1:27017,mongo2:27017,mongo3:27017",
-     "database":"test",
-     "collection":"pageviews",
-     "key.converter": "org.apache.kafka.connect.storage.StringConverter",
-     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
-     "value.converter.schemas.enable": "false"
-}}' http://localhost:8083/connectors -w "\n"
+# echo -e "\nAdding MongoDB Kafka Sink Connector for the 'pageviews' topic into the 'test.pageviews' collection:"
+# curl -X POST -H "Content-Type: application/json" --data '
+#   {"name": "mongo-sink",
+#    "config": {
+#      "connector.class":"com.mongodb.kafka.connect.MongoSinkConnector",
+#      "tasks.max":"1",
+#      "topics":"pageviews",
+#      "connection.uri":"mongodb://mongo1:27017,mongo2:27017,mongo3:27017",
+#      "database":"test",
+#      "collection":"pageviews",
+#      "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+#      "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+#      "value.converter.schemas.enable": "false"
+# }}' http://localhost:8083/connectors -w "\n"
 
 sleep 2
 echo -e "\nAdding MongoDB Kafka Source Connector for the 'test.pageviews' collection:"
@@ -126,15 +126,26 @@ curl -X POST -H "Content-Type: application/json" --data '
      "connection.uri":"mongodb://mongo1:27017,mongo2:27017,mongo3:27017",
      "topic.prefix":"mongo",
      "database":"test",
-     "collection":"pageviews"
+     "collection":"pageviews",
+     "output.format.key": "schema",
+     "output.format.value": "schema",
+     "output.schema.infer.value": false,
+     "copy.existing": "true",
+     "publish.full.document.only": true,
+     "errors.tolerance": "all",
+     "errors.deadletterqueue.topic.name": "dlq_test",
+     "errors.deadletterqueue.context.headers.enable": true,
+     "errors.log.enable": true
+}
 }}' http://localhost:8083/connectors -w "\n"
 
-sleep 2
-echo -e "\nKafka Connectors: \n"
-curl -X GET "http://localhost:8083/connectors/" -w "\n"
 
-echo "Looking at data in 'db.pageviews':"
-docker-compose exec mongo1 /usr/bin/mongo --eval 'db.pageviews.find()'
+# sleep 2
+# echo -e "\nKafka Connectors: \n"
+# curl -X GET "http://localhost:8083/connectors/" -w "\n"
+
+# echo "Looking at data in 'db.pageviews':"
+# docker-compose exec mongo1 /usr/bin/mongo --eval 'db.pageviews.find()'
 
 
 echo -e '''
